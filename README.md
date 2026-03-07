@@ -1,28 +1,27 @@
-# 🧠 Federated Learning with Device Personality Weighting
+# Federated Learning with Device Personality Weighting
 
 A research-style federated learning project that implements **standard FedAvg** and a novel **personality-weighted aggregation** strategy. Built with **PyTorch** and **Flower (flwr)**.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?logo=pytorch&logoColor=white)
 ![Flower](https://img.shields.io/badge/Flower-1.5+-4CAF50)
-![License](https://img.shields.io/badge/License-MIT-blue)
 
 ---
 
-## 📋 Overview
+## Overview
 
 This project simulates a federated learning system across **5 clients** on the **MNIST** dataset. It supports two aggregation modes:
 
-| Mode | Strategy | Aggregation Formula |
-|------|----------|---------------------|
-| **Basic** | FedAvg | $W_{global} = \sum \frac{n_k}{N} \cdot W_k$ |
+| Mode            | Strategy            | Aggregation Formula                                                    |
+| --------------- | ------------------- | ---------------------------------------------------------------------- |
+| **Basic**       | FedAvg              | $W_{global} = \sum \frac{n_k}{N} \cdot W_k$                            |
 | **Personality** | PersonalityWeighted | $W_{global} = \frac{\sum P_k \cdot n_k \cdot W_k}{\sum P_k \cdot n_k}$ |
 
 In **personality mode**, each client is assigned behavioural metrics (stability, reliability, compute power, data diversity) that are combined into a personality score $P_k$, giving higher influence to more capable/reliable devices during model aggregation.
 
 ---
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 deviceWeighFed/
@@ -46,7 +45,7 @@ deviceWeighFed/
 
 ---
 
-## 🚀 Getting Started
+## implements
 
 ### 1. Clone & Setup
 
@@ -84,12 +83,12 @@ python -m fed_personality_fl.main \
     --partition iid
 ```
 
-| Argument | Options | Default | Description |
-|----------|---------|---------|-------------|
-| `--mode` | `basic`, `personality`, `compare` | `basic` | Aggregation strategy |
-| `--rounds` | int | `10` | Number of FL communication rounds |
-| `--clients` | int | `5` | Number of simulated clients |
-| `--partition` | `iid`, `noniid` | `noniid` | Data partitioning strategy |
+| Argument      | Options                           | Default  | Description                       |
+| ------------- | --------------------------------- | -------- | --------------------------------- |
+| `--mode`      | `basic`, `personality`, `compare` | `basic`  | Aggregation strategy              |
+| `--rounds`    | int                               | `10`     | Number of FL communication rounds |
+| `--clients`   | int                               | `5`      | Number of simulated clients       |
+| `--partition` | `iid`, `noniid`                   | `noniid` | Data partitioning strategy        |
 
 ---
 
@@ -115,12 +114,12 @@ Input (1×28×28)
 
 Each client is assigned four metrics that model real-world device characteristics:
 
-| Metric | Range | Weight | Description |
-|--------|-------|--------|-------------|
-| **Stability** | 0.70 – 1.00 | 0.30 | Connection consistency |
-| **Reliability** | 0.60 – 1.00 | 0.30 | Round completion probability |
-| **Compute Power** | 0.50 – 1.00 | 0.20 | Relative processing capability |
-| **Data Diversity** | 0.00 – 1.00 | 0.20 | Normalized label entropy |
+| Metric             | Range       | Weight | Description                    |
+| ------------------ | ----------- | ------ | ------------------------------ |
+| **Stability**      | 0.70 – 1.00 | 0.30   | Connection consistency         |
+| **Reliability**    | 0.60 – 1.00 | 0.30   | Round completion probability   |
+| **Compute Power**  | 0.50 – 1.00 | 0.20   | Relative processing capability |
+| **Data Diversity** | 0.00 – 1.00 | 0.20   | Normalized label entropy       |
 
 **Personality Score:**
 
@@ -128,34 +127,36 @@ $$P_k = 0.30 \cdot \text{stability} + 0.30 \cdot \text{reliability} + 0.20 \cdot
 
 ---
 
-## 📈 Data Partitioning
+## Data Partitioning
 
 ### IID
+
 Each client receives a uniform random split of the training data.
 
 ### Non-IID (Dirichlet)
+
 Labels are distributed across clients using a Dirichlet distribution with concentration parameter α = 0.5. Lower α produces more skewed (heterogeneous) label distributions across clients, simulating realistic federated scenarios.
 
 ---
 
-## 📉 Generated Outputs
+## Generated Outputs
 
 All results are saved to `fed_personality_fl/outputs/`:
 
-| File | Description |
-|------|-------------|
-| `accuracy_basic.png` | Accuracy vs. rounds (Basic FL) |
-| `accuracy_personality.png` | Accuracy vs. rounds (Personality FL) |
-| `loss_basic.png` | Loss vs. rounds (Basic FL) |
-| `loss_personality.png` | Loss vs. rounds (Personality FL) |
-| `personality_scores.png` | Stacked bar chart of per-client scores |
+| File                                  | Description                                     |
+| ------------------------------------- | ----------------------------------------------- |
+| `accuracy_basic.png`                  | Accuracy vs. rounds (Basic FL)                  |
+| `accuracy_personality.png`            | Accuracy vs. rounds (Personality FL)            |
+| `loss_basic.png`                      | Loss vs. rounds (Basic FL)                      |
+| `loss_personality.png`                | Loss vs. rounds (Personality FL)                |
+| `personality_scores.png`              | Stacked bar chart of per-client scores          |
 | `comparison_basic_vs_personality.png` | Side-by-side comparison (with `--mode compare`) |
-| `results_basic.json` | Raw per-round metrics (Basic) |
-| `results_personality.json` | Raw per-round metrics (Personality) |
+| `results_basic.json`                  | Raw per-round metrics (Basic)                   |
+| `results_personality.json`            | Raw per-round metrics (Personality)             |
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 All hyperparameters are centralized in [`config.py`](fed_personality_fl/config.py):
 
@@ -172,7 +173,7 @@ SEED             = 42
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 - Python ≥ 3.10
 - PyTorch ≥ 2.0
@@ -182,7 +183,3 @@ SEED             = 42
 - NumPy ≥ 1.24
 
 ---
-
-## 📄 License
-
-This project is provided for **research and educational purposes**.
