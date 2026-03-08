@@ -39,7 +39,9 @@ from .visualize import (
     plot_personality_scores,
     plot_comparison,
 )
-
+"""import logging
+logging.getLogger("flwr").propagate = False
+"""
 
 def _extract_history(history) -> Dict[str, List[float]]:
     """
@@ -77,11 +79,11 @@ def _print_personality_table(
     set_seed()
     client_indices, train_ds, _ = get_partitioned_data(partition, num_clients)
 
-    print("\n╔══════════════════════════════════════════════════════════════════╗")
-    print("║               DEVICE PERSONALITY METRICS                       ║")
-    print("╠══════════╦════════════╦════════════╦═══════════╦═══════════╦════╣")
-    print("║ Client   ║ Stability  ║ Reliability║ Compute   ║ Diversity ║ P_k║")
-    print("╠══════════╬════════════╬════════════╬═══════════╬═══════════╬════╣")
+    print("\n╔═══════════════════════════════════════════════════════════════════════╗")
+    print("║               DEVICE PERSONALITY METRICS                              ║")
+    print("╠══════════╦════════════╦════════════╦═══════════╦═══════════╦══════════╣")
+    print("║ Client   ║ Stability  ║ Reliability║ Compute   ║ Diversity ║ P_Score  ║")
+    print("╠══════════╬════════════╬════════════╬═══════════╬═══════════╬══════════╣")
 
     client_ids = []
     scores = []
@@ -98,14 +100,14 @@ def _print_personality_table(
         metrics_list.append(metrics)
 
         print(
-            f"║ Client {cid} ║   {metrics['stability']:.4f}  "
-            f"║   {metrics['reliability']:.4f}  "
-            f"║  {metrics['compute_power']:.4f}  "
-            f"║  {metrics['data_diversity']:.4f}  "
-            f"║{score:.4f}║"
+            f"║ Client {cid} ║   {metrics['stability']:.4f}   "
+            f"║   {metrics['reliability']:.4f}   "
+            f"║  {metrics['compute_power']:.4f}   "
+            f"║  {metrics['data_diversity']:.4f}   "
+            f"║  {score:.4f}  ║"
         )
 
-    print("╚══════════╩════════════╩════════════╩═══════════╩═══════════╩════╝\n")
+    print("╚══════════╩════════════╩════════════╩═══════════╩═══════════╩══════════╝\n")
 
     return client_ids, scores, metrics_list
 
