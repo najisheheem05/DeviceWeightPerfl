@@ -16,9 +16,14 @@ Usage
     python -m fed_personality_fl.main --mode compare
 """
 
+import os
+
+# Suppress Ray metrics exporter errors
+os.environ["RAY_METRICS_EXPORT_ENABLED"] = "0"
+os.environ["RAY_DEDUP_LOGS"] = "1"
+
 import argparse
 import json
-import os
 import sys
 from typing import Dict, List
 
