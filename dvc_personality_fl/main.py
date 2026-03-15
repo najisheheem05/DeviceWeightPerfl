@@ -80,10 +80,11 @@ def _extract_history(history) -> Dict[str, List[float]]:
 def _print_personality_table(
     num_clients: int,
     partition: str,
+    dataset: str = config.DATASET,
 ) -> tuple:
     """Print personality metrics for all clients and return data for plotting."""
     set_seed()
-    client_indices, train_ds, _ = get_partitioned_data(partition, num_clients)
+    client_indices, train_ds, _ = get_partitioned_data(partition, num_clients, dataset)
 
     print("\n╔═══════════════════════════════════════════════════════════════════════╗")
     print("║               DEVICE PERSONALITY METRICS                              ║")
@@ -130,6 +131,7 @@ def _run_single_mode(mode: str, args) -> Dict[str, List[float]]:
         num_rounds=args.rounds,
         num_clients=args.clients,
         partition=args.partition,
+        dataset=args.dataset,
     )
 
     results = _extract_history(history)
@@ -185,13 +187,18 @@ def main():
         choices=["iid", "noniid"],
         help=f"Data partition strategy (default: {config.DATA_PARTITION})",
     )
+    parser.add_argument(
+        "--dataset", type=str, default=config.DATASET,
+        choices=["mnist", "cifar10"],
+        help=f"Dataset to use (default: {config.DATASET})",
+    )
     args = parser.parse_args()
 
     set_seed()
 
     # ── Print personality table (always useful context) ────────────────
     client_ids, scores, metrics_list = _print_personality_table(
-        args.clients, args.partition,
+        args.clients, args.partition, args.dataset,
     )
     plot_personality_scores(client_ids, scores, metrics_list)
 

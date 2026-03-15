@@ -13,7 +13,7 @@ import flwr as fl
 from flwr.common import Metrics, Context
 
 from . import config
-from .model import MNISTNet
+from .model import get_model
 from .strategy import PersonalityWeightedStrategy
 from .client import FlowerClient
 from .dataset import get_partitioned_data, get_client_loaders, get_client_labels
@@ -32,6 +32,7 @@ def run_simulation(
     num_rounds: int = config.NUM_ROUNDS,
     num_clients: int = config.NUM_CLIENTS,
     partition: str = config.DATA_PARTITION,
+    dataset: str = config.DATASET,
 ) -> fl.server.history.History:
     """
     Run the full FL simulation and return the Flower History object.
@@ -46,6 +47,8 @@ def run_simulation(
         Number of simulated clients.
     partition : str
         "iid" or "noniid"
+    dataset : str
+        "mnist" or "cifar10"
 
     Returns
     -------
@@ -55,7 +58,7 @@ def run_simulation(
     set_seed()
 
     # ── Data preparation ───────────────────────────────────────────────
-    client_indices, train_ds, test_ds = get_partitioned_data(partition, num_clients)
+    client_indices, train_ds, test_ds = get_partitioned_data(partition, num_clients, dataset)
 
     # ── Client factory for Flower simulation ───────────────────────────
     def client_fn(context: Context) -> fl.client.Client:
@@ -70,10 +73,11 @@ def run_simulation(
             test_loader=test_loader,
             client_labels=labels,
             mode=mode,
+            dataset=dataset,
         ).to_client()
 
     # ── Strategy selection ─────────────────────────────────────────────
-    initial_model = MNISTNet()
+    initial_model = get_model(dataset)
     initial_params = get_parameters_from_model(initial_model)
 
     common_kwargs = dict(

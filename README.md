@@ -10,7 +10,7 @@ A research-style federated learning project that implements **standard FedAvg** 
 
 ## Overview
 
-This project simulates a federated learning system across **5 clients** on the **MNIST** dataset. It supports two aggregation modes:
+This project simulates a federated learning system across **5 clients** with support for **MNIST** and **CIFAR-10** datasets. It supports two aggregation modes:
 
 | Mode            | Strategy            | Aggregation Formula                                                    |
 | --------------- | ------------------- | ---------------------------------------------------------------------- |
@@ -31,8 +31,8 @@ deviceWeighFed/
 └── fed_personality_fl/
     ├── __init__.py
     ├── config.py                  # Central hyperparameters & settings
-    ├── dataset.py                 # MNIST loading, IID & Non-IID partitioning
-    ├── model.py                   # CNN architecture, train & evaluate
+    ├── dataset.py                 # MNIST/CIFAR-10 loading, IID & Non-IID partitioning
+    ├── model.py                   # CNN architectures (MNISTNet/CIFAR10Net), train & evaluate
     ├── personality.py             # Device personality metrics & scoring
     ├── strategy.py                # PersonalityWeightedStrategy (extends FedAvg)
     ├── client.py                  # Flower NumPy client
@@ -63,24 +63,25 @@ pip install -r requirements.txt
 ### 2. Run Experiments
 
 ```bash
-# Standard FedAvg (10 rounds, 5 clients, Non-IID by default)
-python -m fed_personality_fl.main --mode basic
+# Standard FedAvg on MNIST (10 rounds, 5 clients, Non-IID by default)
+python -m dvc_personality_fl.main --mode basic
 
-# Personality-weighted FL
-python -m fed_personality_fl.main --mode personality
+# Personality-weighted FL on CIFAR-10
+python -m dvc_personality_fl.main --mode personality --dataset cifar10
 
 # Run BOTH modes & generate comparison plot
-python -m fed_personality_fl.main --mode compare
+python -m dvc_personality_fl.main --mode compare
 ```
 
 ### 3. Custom Settings
 
 ```bash
-python -m fed_personality_fl.main \
+python -m dvc_personality_fl.main \
     --mode personality \
     --rounds 15 \
     --clients 5 \
-    --partition iid
+    --partition iid \
+    --dataset cifar10
 ```
 
 | Argument      | Options                           | Default  | Description                       |
@@ -89,12 +90,15 @@ python -m fed_personality_fl.main \
 | `--rounds`    | int                               | `10`     | Number of FL communication rounds |
 | `--clients`   | int                               | `5`      | Number of simulated clients       |
 | `--partition` | `iid`, `noniid`                   | `noniid` | Data partitioning strategy        |
+| `--dataset`   | `mnist`, `cifar10`                | `mnist`  | Dataset to train on               |
 
 ---
 
-## 🧪 Model Architecture
+## 🧪 Model Architectures
 
-Simple CNN classifier for MNIST:
+The model is automatically selected based on the `--dataset` flag via `get_model()`.
+
+**MNISTNet** — for MNIST (1×28×28 grayscale):
 
 ```
 Input (1×28×28)
@@ -102,6 +106,17 @@ Input (1×28×28)
   → Conv2d(32, 64, 3, padding=1) → ReLU → MaxPool2d(2)
   → Flatten
   → Linear(64×7×7, 128) → ReLU
+  → Linear(128, 10)
+```
+
+**CIFAR10Net** — for CIFAR-10 (3×32×32 colour):
+
+```
+Input (3×32×32)
+  → Conv2d(3, 32, 3, padding=1) → ReLU → MaxPool2d(2)
+  → Conv2d(32, 64, 3, padding=1) → ReLU → MaxPool2d(2)
+  → Flatten
+  → Linear(64×8×8, 128) → ReLU
   → Linear(128, 10)
 ```
 
@@ -166,6 +181,7 @@ NUM_ROUNDS       = 10
 LOCAL_EPOCHS     = 2
 BATCH_SIZE       = 32
 LEARNING_RATE    = 1e-3
+DATASET          = "mnist"       # "mnist" or "cifar10"
 DATA_PARTITION   = "noniid"
 DIRICHLET_ALPHA  = 0.5
 SEED             = 42

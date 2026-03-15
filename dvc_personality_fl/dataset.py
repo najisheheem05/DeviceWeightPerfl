@@ -1,5 +1,5 @@
 """
-dataset.py — MNIST data loading and federated partitioning.
+dataset.py — Data loading and federated partitioning for MNIST / CIFAR-10.
 
 Supports two partitioning modes:
   • IID      — each client receives a uniformly random subset
@@ -15,22 +15,54 @@ from torchvision import datasets, transforms
 from . import config
 
 
-# ── Standard MNIST transform ──────────────────────────────────────────
-_transform = transforms.Compose([
+# ── Dataset-specific transforms ───────────────────────────────────────
+
+_mnist_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.1307,), (0.3081,)),  # MNIST global mean/std
 ])
 
+_cifar10_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(
+        (0.4914, 0.4822, 0.4465),   # CIFAR-10 per-channel mean
+        (0.2470, 0.2435, 0.2616),   # CIFAR-10 per-channel std
+    ),
+])
+
+
+# ── Dataset loaders ───────────────────────────────────────────────────
 
 def _load_mnist():
     """Download (if needed) and return the full MNIST train & test sets."""
     train_ds = datasets.MNIST(
-        root=config.DATA_DIR, train=True, download=True, transform=_transform
+        root=config.DATA_DIR, train=True, download=True, transform=_mnist_transform
     )
     test_ds = datasets.MNIST(
-        root=config.DATA_DIR, train=False, download=True, transform=_transform
+        root=config.DATA_DIR, train=False, download=True, transform=_mnist_transform
     )
     return train_ds, test_ds
+
+
+def _load_cifar10():
+    """Download (if needed) and return the full CIFAR-10 train & test sets."""
+    train_ds = datasets.CIFAR10(
+        root=config.DATA_DIR, train=True, download=True, transform=_cifar10_transform
+    )
+    test_ds = datasets.CIFAR10(
+        root=config.DATA_DIR, train=False, download=True, transform=_cifar10_transform
+    )
+    return train_ds, test_ds
+
+
+def _load_dataset(dataset: str):
+    """Dispatch to the correct dataset loader."""
+    if dataset == "mnist":
+        return _load_mnist()
+    elif dataset == "cifar10":
+        return _load_cifar10()
+    else:
+        raise ValueError(f"Unknown dataset: {dataset!r}. Choose 'mnist' or 'cifar10'.")
 
 
 # ── Partitioning strategies ───────────────────────────────────────────
@@ -90,7 +122,8 @@ def partition_noniid(dataset, num_clients: int, alpha: float = config.DIRICHLET_
 # ── Public API ─────────────────────────────────────────────────────────
 
 def get_partitioned_data(partition: str = config.DATA_PARTITION,
-                         num_clients: int = config.NUM_CLIENTS):
+                         num_clients: int = config.NUM_CLIENTS,
+                         dataset: str = config.DATASET):
     """
     Return partitioned training data and a shared test set.
 
@@ -100,14 +133,16 @@ def get_partitioned_data(partition: str = config.DATA_PARTITION,
         "iid" or "noniid"
     num_clients : int
         Number of FL clients to partition for.
+    dataset : str
+        "mnist" or "cifar10"
 
     Returns
     -------
     client_train_indices : list[np.ndarray]
-    train_dataset : torchvision.datasets.MNIST
-    test_dataset  : torchvision.datasets.MNIST
+    train_dataset : torchvision Dataset
+    test_dataset  : torchvision Dataset
     """
-    train_ds, test_ds = _load_mnist()
+    train_ds, test_ds = _load_dataset(dataset)
 
     if partition == "iid":
         client_indices = partition_iid(train_ds, num_clients)

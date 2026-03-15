@@ -17,7 +17,7 @@ import numpy as np
 import flwr as fl
 
 from . import config
-from .model import MNISTNet, train_one_epoch, evaluate
+from .model import get_model, train_one_epoch, evaluate
 from .personality import (
     generate_personality_metrics,
     compute_data_diversity,
@@ -36,6 +36,7 @@ class FlowerClient(fl.client.NumPyClient):
         test_loader,
         client_labels: np.ndarray,
         mode: str = config.MODE,
+        dataset: str = config.DATASET,
     ):
         self.client_id = client_id
         self.train_loader = train_loader
@@ -45,7 +46,7 @@ class FlowerClient(fl.client.NumPyClient):
         self.device = get_device()
 
         # Local model (re-created each round from global weights)
-        self.model = MNISTNet().to(self.device)
+        self.model = get_model(dataset).to(self.device)
 
         # Pre-compute personality (deterministic per client)
         self.personality_metrics = generate_personality_metrics(client_id)

@@ -1,3 +1,5 @@
 dvc_personality_fl/outputs/
 venv
 python-version
+out_recs/
+run.sh
