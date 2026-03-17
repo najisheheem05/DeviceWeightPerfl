@@ -14,6 +14,7 @@ PersonalityWeightedStrategy can use it during aggregation.
 from typing import Dict, List, Tuple
 
 import numpy as np
+import torch
 import flwr as fl
 
 from . import config
@@ -22,6 +23,7 @@ from .personality import (
     generate_personality_metrics,
     compute_data_diversity,
     compute_personality_score,
+    compute_dynamic_personality_score,
 )
 from .utils import get_device, get_parameters_from_model, set_parameters_to_model
 
@@ -72,19 +74,50 @@ class FlowerClient(fl.client.NumPyClient):
         Local training round.
 
         1. Set global weights → local model
-        2. Train for LOCAL_EPOCHS epochs
-        3. Return updated weights + num_examples + metrics
+        2. Save a copy of the old parameters
+        3. Train for LOCAL_EPOCHS epochs, tracking loss
+        4. Compute dynamic personality score from real metrics
+        5. Return updated weights + num_examples + metrics
         """
         self.set_parameters(parameters)
 
-        # Local training
-        for _ in range(config.LOCAL_EPOCHS):
-            train_one_epoch(self.model, self.train_loader, self.device)
+        use_dynamic = (config.PERSONALITY_MODE == "dynamic")
 
-        # Metrics to send back
+        # ── Snapshot parameters before training (dynamic mode only) ────
+        if self.mode == "personality" and use_dynamic:
+            old_params = [p.clone().detach() for p in self.model.parameters()]
+
+        # ── Local training ─────────────────────────────────────────────
+        total_loss = 0.0
+        for _ in range(config.LOCAL_EPOCHS):
+            epoch_loss = train_one_epoch(self.model, self.train_loader, self.device)
+            total_loss += epoch_loss
+        avg_loss = total_loss / max(config.LOCAL_EPOCHS, 1)
+
+        # ── Build metrics dict ─────────────────────────────────────────
         metrics: Dict = {"client_id": self.client_id}
+
         if self.mode == "personality":
-            metrics["personality_score"] = float(self.personality_score)
+            if use_dynamic:
+                # Compute real per-round metrics
+                update_mag = 0.0
+                for new_p, old_p in zip(self.model.parameters(), old_params):
+                    update_mag += (new_p - old_p).norm(2).item() ** 2
+                update_mag = update_mag ** 0.5
+
+                _, val_accuracy = evaluate(self.model, self.test_loader, self.device)
+
+                score = compute_dynamic_personality_score(
+                    training_loss=avg_loss,
+                    val_accuracy=val_accuracy,
+                    update_magnitude=update_mag,
+                    data_diversity=self.personality_metrics["data_diversity"],
+                )
+            else:
+                # Static: use pre-computed random personality score
+                score = self.personality_score
+
+            metrics["personality_score"] = float(score)
 
         num_examples = len(self.train_loader.dataset)
         return self.get_parameters({}), num_examples, metrics

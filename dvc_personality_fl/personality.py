@@ -99,3 +99,45 @@ def compute_personality_score(metrics: Dict[str, float]) -> float:
         + w["data_diversity"] * metrics["data_diversity"]
     )
     return round(score, 4)
+
+
+def compute_dynamic_personality_score(
+    training_loss: float,
+    val_accuracy: float,
+    update_magnitude: float,
+    data_diversity: float,
+) -> float:
+    """
+    Compute personality score from real, per-round training signals.
+
+    Parameters
+    ----------
+    training_loss : float
+        Average training loss from the current round's local training.
+        Lower loss → higher contribution (inverted and clamped to [0, 1]).
+    val_accuracy : float
+        Validation accuracy after local training (already in [0, 1]).
+    update_magnitude : float
+        L2 norm of (new_params - old_params). Normalised via sigmoid.
+    data_diversity : float
+        Normalised label entropy (already in [0, 1]).
+
+    Returns
+    -------
+    score : float
+    """
+    # Invert loss: lower loss → higher score, clamp to [0, 1]
+    loss_score = max(0.0, 1.0 - training_loss)
+
+    # Sigmoid normalisation for update magnitude
+    # Centers around magnitude=1.0; adjust scale as needed
+    um_score = 1.0 / (1.0 + np.exp(-0.5 * (update_magnitude - 1.0)))
+
+    w = config.DYNAMIC_PERSONALITY_WEIGHTS
+    score = (
+        w["training_loss"]     * loss_score
+        + w["val_accuracy"]    * val_accuracy
+        + w["update_magnitude"] * um_score
+        + w["data_diversity"]  * data_diversity
+    )
+    return round(score, 4)

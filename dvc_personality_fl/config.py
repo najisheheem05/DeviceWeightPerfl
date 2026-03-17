@@ -1,5 +1,5 @@
 """
-config.py — Central configuration for the Federated Learning project.
+config.py — Central configuration.
 
 All hyperparameters, paths, and experiment settings live here so that
 every other module can import them from a single source of truth.
@@ -32,13 +32,20 @@ DATASET = "cifar10"
 # ── Data partitioning ─────────────────────────────────────────────────
 # "iid"    — each client gets a uniform random split
 # "noniid" — Dirichlet-based heterogeneous label distribution
-DATA_PARTITION = "iid"
+DATA_PARTITION = "noniid"
 DIRICHLET_ALPHA = 0.5  # Lower α → more skewed label distributions
 
 # ── Mode toggle ────────────────────────────────────────────────────────
 # "basic"       — standard FedAvg aggregation
 # "personality" — personality-weighted aggregation
 MODE = "basic"
+
+# ── Personality scoring mode ───────────────────────────────────────────
+# "static"  — random per-client metrics (stability, reliability, etc.)
+#              computed once at client init and fixed for all rounds
+# "dynamic" — real per-round metrics (training loss, val accuracy, etc.)
+#              recomputed every round from actual training signals
+PERSONALITY_MODE = "dynamic"
 
 # ── Personality weight coefficients ────────────────────────────────────
 # Used in compute_personality_score():
@@ -50,6 +57,23 @@ PERSONALITY_WEIGHTS = {
     "compute_power": 0.20,
     "data_diversity": 0.20,
 }
+
+# ── Dynamic personality weight coefficients ────────────────────────────
+# Used in compute_dynamic_personality_score() with real per-round metrics:
+#   P_k = w_tl * (1 - norm_loss) + w_va * val_accuracy
+#       + w_um * norm_update_mag  + w_dd * data_diversity
+DYNAMIC_PERSONALITY_WEIGHTS = {
+    "training_loss": 0.25,
+    "val_accuracy": 0.35,
+    "update_magnitude": 0.15,
+    "data_diversity": 0.25,
+}
+
+# ── Softmax temperature for aggregation weighting ─────────────────────
+# Controls how sharply personality scores differentiate client weights.
+# Higher → more uniform (closer to FedAvg), Lower → more aggressive.
+# Set to 0.0 to disable softmax and use raw P_k * n_k weighting.
+SOFTMAX_TEMPERATURE = 2.0
 
 # ── Random seed (for reproducibility) ─────────────────────────────────
 SEED = 42
