@@ -24,14 +24,15 @@ BATCH_SIZE = 32  # Mini-batch size for local training
 LEARNING_RATE = 1e-3  # Adam optimizer learning rate
 
 # ── Dataset selection ─────────────────────────────────────────────────
-# "mnist"   — 28×28 grayscale handwritten digits (10 classes)
-# "cifar10" — 32×32 colour natural images (10 classes)
+# "mnist"     — 28×28 grayscale handwritten digits (10 classes)
+# "fsn-mnist" — 28×28 grayscale fashion items      (10 classes)
+# "cifar10"   — 32×32 colour natural images         (10 classes)
 DATASET = "cifar10"
 
 # ── Data partitioning ─────────────────────────────────────────────────
 # "iid"    — each client gets a uniform random split
 # "noniid" — Dirichlet-based heterogeneous label distribution
-DATA_PARTITION = "noniid"
+DATA_PARTITION = "iid"
 DIRICHLET_ALPHA = 0.5  # Lower α → more skewed label distributions
 
 # ── Mode toggle ────────────────────────────────────────────────────────

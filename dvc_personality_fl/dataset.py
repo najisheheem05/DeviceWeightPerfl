@@ -1,5 +1,5 @@
 """
-dataset.py — Data loading and federated partitioning for MNIST / CIFAR-10.
+dataset.py — Data loading and federated partitioning for MNIST / Fashion-MNIST / CIFAR-10.
 
 Supports two partitioning modes:
   • IID      — each client receives a uniformly random subset
@@ -20,6 +20,11 @@ from . import config
 _mnist_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.1307,), (0.3081,)),  # MNIST global mean/std
+])
+
+_fmnist_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.2860,), (0.3530,)),  # Fashion-MNIST global mean/std
 ])
 
 _cifar10_transform = transforms.Compose([
@@ -44,6 +49,17 @@ def _load_mnist():
     return train_ds, test_ds
 
 
+def _load_fashion_mnist():
+    """Download (if needed) and return the full Fashion-MNIST train & test sets."""
+    train_ds = datasets.FashionMNIST(
+        root=config.DATA_DIR, train=True, download=True, transform=_fmnist_transform
+    )
+    test_ds = datasets.FashionMNIST(
+        root=config.DATA_DIR, train=False, download=True, transform=_fmnist_transform
+    )
+    return train_ds, test_ds
+
+
 def _load_cifar10():
     """Download (if needed) and return the full CIFAR-10 train & test sets."""
     train_ds = datasets.CIFAR10(
@@ -59,10 +75,15 @@ def _load_dataset(dataset: str):
     """Dispatch to the correct dataset loader."""
     if dataset == "mnist":
         return _load_mnist()
+    elif dataset == "fsn-mnist":
+        return _load_fashion_mnist()
     elif dataset == "cifar10":
         return _load_cifar10()
     else:
-        raise ValueError(f"Unknown dataset: {dataset!r}. Choose 'mnist' or 'cifar10'.")
+        raise ValueError(
+            f"Unknown dataset: {dataset!r}. "
+            "Choose 'mnist', 'fsn-mnist', or 'cifar10'."
+        )
 
 
 # ── Partitioning strategies ───────────────────────────────────────────
@@ -134,7 +155,7 @@ def get_partitioned_data(partition: str = config.DATA_PARTITION,
     num_clients : int
         Number of FL clients to partition for.
     dataset : str
-        "mnist" or "cifar10"
+        "mnist", "fsn-mnist", or "cifar10"
 
     Returns
     -------

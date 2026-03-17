@@ -3,8 +3,9 @@ model.py — CNN architectures and training / evaluation routines.
 
 Supported datasets
 ──────────────────
-  • MNIST    — 1-channel 28×28 grayscale images (MNISTNet)
-  • CIFAR-10 — 3-channel 32×32 colour images   (CIFAR10Net)
+  • MNIST         — 1-channel 28×28 grayscale images (MNISTNet)
+  • Fashion-MNIST — 1-channel 28×28 grayscale images (MNISTNet)
+  • CIFAR-10      — 3-channel 32×32 colour images   (CIFAR10Net)
 
 Use ``get_model(dataset)`` to obtain the correct architecture.
 
@@ -68,12 +69,15 @@ class CIFAR10Net(nn.Module):
 
 def get_model(dataset: str = config.DATASET) -> nn.Module:
     """Return the appropriate CNN for the given dataset name."""
-    if dataset == "mnist":
+    if dataset in ("mnist", "fsn-mnist"):
         return MNISTNet()
     elif dataset == "cifar10":
         return CIFAR10Net()
     else:
-        raise ValueError(f"Unknown dataset: {dataset!r}. Choose 'mnist' or 'cifar10'.")
+        raise ValueError(
+            f"Unknown dataset: {dataset!r}. "
+            "Choose 'mnist', 'fsn-mnist', or 'cifar10'."
+        )
 
 
 # ── Training & evaluation ─────────────────────────────────────────────

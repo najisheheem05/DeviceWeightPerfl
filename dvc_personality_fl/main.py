@@ -189,7 +189,7 @@ def main():
     )
     parser.add_argument(
         "--dataset", type=str, default=config.DATASET,
-        choices=["mnist", "cifar10"],
+        choices=["mnist", "fsn-mnist", "cifar10"],
         help=f"Dataset to use (default: {config.DATASET})",
     )
     args = parser.parse_args()
