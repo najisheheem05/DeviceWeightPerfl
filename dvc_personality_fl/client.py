@@ -107,12 +107,23 @@ class FlowerClient(fl.client.NumPyClient):
 
                 _, val_accuracy = evaluate(self.model, self.test_loader, self.device)
 
+                # Compute individual component scores for visualization
+                loss_score = max(0.0, 1.0 - avg_loss)
+                um_score = 1.0 / (1.0 + np.exp(-0.5 * (update_mag - 1.0)))
+                dd_score = self.personality_metrics["data_diversity"]
+
                 score = compute_dynamic_personality_score(
                     training_loss=avg_loss,
                     val_accuracy=val_accuracy,
                     update_magnitude=update_mag,
-                    data_diversity=self.personality_metrics["data_diversity"],
+                    data_diversity=dd_score,
                 )
+
+                # Report component scores for stacked bar visualization
+                metrics["dyn_loss_score"] = float(loss_score)
+                metrics["dyn_val_accuracy"] = float(val_accuracy)
+                metrics["dyn_um_score"] = float(um_score)
+                metrics["dyn_data_diversity"] = float(dd_score)
             else:
                 # Static: use pre-computed random personality score
                 score = self.personality_score

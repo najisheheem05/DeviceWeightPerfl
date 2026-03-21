@@ -48,6 +48,73 @@ def plot_accuracy_vs_rounds(
     plt.close()
 
 
+def plot_dynamic_personality_scores(
+    rounds: List[int],
+    client_scores: Dict[int, List[float]],
+    save: bool = True,
+) -> None:
+    """Plot dynamic personality scores over FL rounds for each client."""
+    _ensure_output_dir()
+    plt.figure(figsize=(8, 5))
+    for client_id, scores in client_scores.items():
+        plt.plot(rounds, scores, marker="o", linewidth=2, label=f"Client {client_id}")
+    plt.title("Dynamic Personality Scores per Round", fontsize=14)
+    plt.xlabel("Round")
+    plt.ylabel("Personality Score")
+    plt.grid(True, alpha=0.3)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    if save:
+        path = os.path.join(config.OUTPUT_DIR, "dynamic_personality_scores.png")
+        plt.savefig(path, dpi=150)
+        print(f"  📊  Saved → {path}")
+    plt.close()
+
+
+def plot_dynamic_personality_breakdown(
+    client_ids: List[int],
+    client_dyn_metrics: List[Dict[str, float]],
+    save: bool = True,
+) -> None:
+    """
+    Stacked bar chart of dynamic personality metric components per client.
+
+    Each bar shows the weighted contribution of training-loss score,
+    val accuracy, update-magnitude score, and data diversity for the
+    final FL round.
+    """
+    _ensure_output_dir()
+    fig, ax = plt.subplots(figsize=(9, 5))
+    x = np.arange(len(client_ids))
+    width = 0.5
+
+    w = config.DYNAMIC_PERSONALITY_WEIGHTS
+    bottom = np.zeros(len(client_ids))
+    colors = ["#4CAF50", "#2196F3", "#FF9800", "#9C27B0"]
+    labels = ["Training Loss", "Val Accuracy", "Update Magnitude", "Data Diversity"]
+    keys = ["dyn_loss_score", "dyn_val_accuracy", "dyn_um_score", "dyn_data_diversity"]
+    weight_keys = ["training_loss", "val_accuracy", "update_magnitude", "data_diversity"]
+
+    for key, wkey, label, color in zip(keys, weight_keys, labels, colors):
+        vals = np.array([m[key] * w[wkey] for m in client_dyn_metrics])
+        ax.bar(x, vals, width, bottom=bottom, label=label, color=color, alpha=0.85)
+        bottom += vals
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"Client {cid}" for cid in client_ids])
+    ax.set_ylabel("Personality Score")
+    ax.set_title("Per-Client Dynamic Personality Scores", fontsize=14)
+    ax.legend(loc="upper right")
+    ax.grid(True, axis="y", alpha=0.3)
+    plt.tight_layout()
+
+    if save:
+        path = os.path.join(config.OUTPUT_DIR, "personality_scores.png")
+        plt.savefig(path, dpi=150)
+        print(f"  📊  Saved → {path}")
+    plt.close()
+
+
 def plot_loss_vs_rounds(
     rounds: List[int],
     losses: List[float],

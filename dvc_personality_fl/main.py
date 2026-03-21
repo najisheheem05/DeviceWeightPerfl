@@ -42,6 +42,8 @@ from .visualize import (
     plot_accuracy_vs_rounds,
     plot_loss_vs_rounds,
     plot_personality_scores,
+    plot_dynamic_personality_scores,
+    plot_dynamic_personality_breakdown,
     plot_comparison,
 )
 
@@ -70,10 +72,33 @@ def _extract_history(history) -> Dict[str, List[float]]:
     # Use union of round numbers (they should match)
     rounds = rounds_acc if rounds_acc else rounds_loss
 
+    # Extract dynamic personality scores if present
+    client_scores = {}
+    client_dyn_metrics = {}  # {cid: {metric_key: value}}
+    if hasattr(history, "metrics_distributed_fit"):
+        for key, val_list in history.metrics_distributed_fit.items():
+            if key.startswith("client_") and key.endswith("_score"):
+                # e.g. "client_0_score"
+                parts = key.split("_")
+                cid = parts[1]
+                client_scores[cid] = [score for _, score in val_list]
+            # Extract dynamic component scores (e.g. "client_0_dyn_loss_score")
+            dyn_keys = ["dyn_loss_score", "dyn_val_accuracy", "dyn_um_score", "dyn_data_diversity"]
+            for dk in dyn_keys:
+                if key.endswith(dk):
+                    parts = key.split("_")
+                    cid = parts[1]
+                    if cid not in client_dyn_metrics:
+                        client_dyn_metrics[cid] = {}
+                    # Take the last round's value
+                    client_dyn_metrics[cid][dk] = val_list[-1][1] if val_list else 0.0
+
     return {
         "rounds": rounds,
         "accuracies": accuracies,
         "losses": losses,
+        "client_scores": client_scores,
+        "client_dyn_metrics": client_dyn_metrics,
     }
 
 
@@ -152,6 +177,15 @@ def _run_single_mode(mode: str, args) -> Dict[str, List[float]]:
     if results["rounds"]:
         plot_accuracy_vs_rounds(results["rounds"], results["accuracies"], mode)
         plot_loss_vs_rounds(results["rounds"], results["losses"], mode)
+        if results.get("client_scores"):
+            plot_dynamic_personality_scores(results["rounds"], results["client_scores"])
+        # Plot dynamic personality breakdown bar chart (replaces static one)
+        if results.get("client_dyn_metrics"):
+            dyn = results["client_dyn_metrics"]
+            sorted_cids = sorted(dyn.keys(), key=int)
+            client_ids_dyn = [int(c) for c in sorted_cids]
+            metrics_list_dyn = [dyn[c] for c in sorted_cids]
+            plot_dynamic_personality_breakdown(client_ids_dyn, metrics_list_dyn)
 
     # Save results as JSON for later comparison
     json_path = os.path.join(config.OUTPUT_DIR, f"results_{mode}.json")
@@ -200,7 +234,10 @@ def main():
     client_ids, scores, metrics_list = _print_personality_table(
         args.clients, args.partition, args.dataset,
     )
-    plot_personality_scores(client_ids, scores, metrics_list)
+    # Only plot static personality chart when using static mode;
+    # dynamic mode will generate its own bar chart after simulation
+    if config.PERSONALITY_MODE != "dynamic":
+        plot_personality_scores(client_ids, scores, metrics_list)
 
     # ── Run requested mode(s) ──────────────────────────────────────────
     if args.mode == "compare":

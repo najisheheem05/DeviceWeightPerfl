@@ -103,4 +103,15 @@ class PersonalityWeightedStrategy(FedAvg):
             "personality_weighted": True,
         }
 
+        # ── Propagate per-client dynamic component scores ──────────────
+        dyn_keys = ["dyn_loss_score", "dyn_val_accuracy", "dyn_um_score", "dyn_data_diversity"]
+        for _, fit_res in results:
+            cid = int(fit_res.metrics.get("client_id", -1))
+            for key in dyn_keys:
+                if key in fit_res.metrics:
+                    metrics_aggregated[f"client_{cid}_{key}"] = fit_res.metrics[key]
+            # Also propagate the overall personality score per client
+            if "personality_score" in fit_res.metrics:
+                metrics_aggregated[f"client_{cid}_score"] = fit_res.metrics["personality_score"]
+
         return ndarrays_to_parameters(aggregated), metrics_aggregated
