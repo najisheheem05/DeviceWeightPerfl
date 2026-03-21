@@ -4,9 +4,11 @@ strategy.py — Custom Flower aggregation strategy for personality-weighted FL.
 Provides:
   • PersonalityWeightedStrategy  — extends FedAvg so that the global model
     update is a weighted average where each client's contribution is scaled
-    by its personality score *and* dataset size:
+    by its personality score *and* dataset size.
 
-        W_global = Σ (P_k · n_k · W_k) / Σ (P_k · n_k)
+    When SOFTMAX_TEMPERATURE > 0, the combined scores are passed through a
+    temperature-controlled softmax to prevent any single client from
+    dominating the aggregation.
 
 The personality score P_k is passed from each client via the Flower
 metrics dict under the key "personality_score".
@@ -26,6 +28,8 @@ from flwr.common import (
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import FedAvg
 
+from . import config
+
 
 class PersonalityWeightedStrategy(FedAvg):
     """
@@ -43,14 +47,15 @@ class PersonalityWeightedStrategy(FedAvg):
         failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
         """
-        Personality-weighted aggregation.
+        Personality-weighted aggregation with optional softmax temperature.
 
         Steps
         -----
         1. Extract per-client weights (ndarrays), sample counts, and
            personality scores from the FitRes objects.
         2. Compute combined weight  c_k = P_k × n_k  for each client.
-        3. Aggregate:  W_global[i] = Σ c_k · W_k[i]  /  Σ c_k
+        3. Apply softmax temperature (if enabled) for smoother weighting.
+        4. Aggregate:  W_global[i] = Σ w_k · W_k[i]
         """
         if not results:
             return None, {}
@@ -69,7 +74,19 @@ class PersonalityWeightedStrategy(FedAvg):
             client_weights.append(ndarrays)
             combined_scores.append(p_k * n_k)
 
-        total_score = sum(combined_scores)
+        # ── Apply softmax temperature ──────────────────────────────────
+        scores = np.array(combined_scores, dtype=np.float64)
+        temperature = config.SOFTMAX_TEMPERATURE
+
+        if temperature > 0:
+            # Subtract max for numerical stability
+            scores_shifted = scores / temperature
+            scores_shifted -= scores_shifted.max()
+            exp_scores = np.exp(scores_shifted)
+            weights = exp_scores / exp_scores.sum()
+        else:
+            # Raw weighting (no softmax)
+            weights = scores / scores.sum()
 
         # ── Weighted aggregation ───────────────────────────────────────
         # For each parameter tensor, compute the weighted sum
@@ -78,8 +95,8 @@ class PersonalityWeightedStrategy(FedAvg):
         for layer_idx in range(num_layers):
             weighted_sum = np.zeros_like(client_weights[0][layer_idx])
             for client_idx in range(len(client_weights)):
-                weighted_sum += combined_scores[client_idx] * client_weights[client_idx][layer_idx]
-            aggregated.append(weighted_sum / total_score)
+                weighted_sum += weights[client_idx] * client_weights[client_idx][layer_idx]
+            aggregated.append(weighted_sum)
 
         # ── Aggregate metrics for logging ──────────────────────────────
         metrics_aggregated: Dict[str, Scalar] = {

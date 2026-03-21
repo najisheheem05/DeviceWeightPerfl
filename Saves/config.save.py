@@ -17,8 +17,8 @@ os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ── Federated learning settings ───────────────────────────────────────
-NUM_CLIENTS = 5  # Number of simulated FL clients
-NUM_ROUNDS = 10  # Number of FL communication rounds
+NUM_CLIENTS = 3  # Number of simulated FL clients
+NUM_ROUNDS = 5  # Number of FL communication rounds
 LOCAL_EPOCHS = 2  # Epochs each client trains per round
 BATCH_SIZE = 32  # Mini-batch size for local training
 LEARNING_RATE = 1e-3  # Adam optimizer learning rate
