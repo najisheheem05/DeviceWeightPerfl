@@ -88,7 +88,8 @@ class PersonalityWeightedStrategy(FedAvg):
 
         # ── Collect per-client data ────────────────────────────────────
         client_weights = []   # list of list-of-ndarrays
-        combined_scores = []  # P_k * n_k
+        p_scores = []         # personality scores P_k
+        n_samples = []        # dataset sizes n_k
 
         for _, fit_res in active_results:
             ndarrays = parameters_to_ndarrays(fit_res.parameters)
@@ -98,21 +99,24 @@ class PersonalityWeightedStrategy(FedAvg):
             p_k = fit_res.metrics.get("personality_score", 1.0)
 
             client_weights.append(ndarrays)
-            combined_scores.append(p_k * n_k)
+            p_scores.append(p_k)
+            n_samples.append(n_k)
 
-        # ── Apply softmax temperature ──────────────────────────────────
-        scores = np.array(combined_scores, dtype=np.float64)
+        p_scores = np.array(p_scores, dtype=np.float64)
+        n_samples = np.array(n_samples, dtype=np.float64)
         temperature = config.SOFTMAX_TEMPERATURE
 
+        # ── Apply softmax to personality scores P_k only ───────────────
         if temperature > 0:
-            # Subtract max for numerical stability
-            scores_shifted = scores / temperature
-            scores_shifted -= scores_shifted.max()
-            exp_scores = np.exp(scores_shifted)
-            weights = exp_scores / exp_scores.sum()
+            p_shifted = p_scores / temperature
+            p_shifted -= p_shifted.max()
+            softmax_p = np.exp(p_shifted) / np.exp(p_shifted).sum()
         else:
-            # Raw weighting (no softmax)
-            weights = scores / scores.sum()
+            softmax_p = p_scores / p_scores.sum()
+
+        # ── Combine with dataset size and normalize ────────────────────
+        combined = softmax_p * n_samples
+        weights = combined / combined.sum()
 
         # ── Weighted aggregation ───────────────────────────────────────
         # For each parameter tensor, compute the weighted sum

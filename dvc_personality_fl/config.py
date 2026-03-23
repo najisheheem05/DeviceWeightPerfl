@@ -19,7 +19,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # ── Federated learning settings ───────────────────────────────────────
 NUM_CLIENTS = 5  # Number of simulated FL clients
 NUM_ROUNDS = 10  # Number of FL communication rounds
-LOCAL_EPOCHS = 2  # Epochs each client trains per round
+LOCAL_EPOCHS = 5  # Epochs each client trains per round
 BATCH_SIZE = 32  # Mini-batch size for local training
 LEARNING_RATE = 1e-3  # Adam optimizer learning rate
 
@@ -52,10 +52,10 @@ PERSONALITY_MODE = "static"
 #   P_k = w_s * stability + w_r * reliability
 #       + w_c * compute_power + w_d * data_diversity
 PERSONALITY_WEIGHTS = {
-    "stability": 0.20,
+    "stability": 0.25,
     "reliability": 0.25,
-    "compute_power": 0.20,
-    "data_diversity": 0.35,
+    "compute_power": 0.25,
+    "data_diversity": 0.25,
 }
 
 # ── Dynamic personality weight coefficients ────────────────────────────
@@ -73,7 +73,7 @@ DYNAMIC_PERSONALITY_WEIGHTS = {
 # Controls how sharply personality scores differentiate client weights.
 # Higher → more uniform (closer to FedAvg), Lower → more aggressive.
 # Set to 0.0 to disable softmax and use raw P_k * n_k weighting.
-SOFTMAX_TEMPERATURE = 4.0
+SOFTMAX_TEMPERATURE = 0.0
 
 # ── Behavioural simulation ─────────────────────────────────────────────
 # When True, personality metrics have real effects on client behaviour:
@@ -84,7 +84,7 @@ SIMULATE_BEHAVIOUR = True
 
 # Standard deviation multiplier for stability-based gradient noise.
 # Noise σ = (1 - stability) * STABILITY_NOISE_SCALE * param_std
-STABILITY_NOISE_SCALE = 0.01
+STABILITY_NOISE_SCALE = 0.1
 
 
 # ── Random seed (for reproducibility) ─────────────────────────────────

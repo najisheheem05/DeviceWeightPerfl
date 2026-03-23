@@ -5,3 +5,4 @@ python-version
 out_recs/
 run.sh
 Saves/
+dvc_personality_fl/data/
