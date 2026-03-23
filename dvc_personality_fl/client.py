@@ -74,14 +74,41 @@ class FlowerClient(fl.client.NumPyClient):
         Local training round.
 
         1. Set global weights → local model
-        2. Save a copy of the old parameters
-        3. Train for LOCAL_EPOCHS epochs, tracking loss
-        4. Compute dynamic personality score from real metrics
-        5. Return updated weights + num_examples + metrics
+        2. (Behavioural) Check reliability — possibly skip this round
+        3. (Behavioural) Scale local epochs by compute_power
+        4. Train for the determined number of epochs, tracking loss
+        5. (Behavioural) Add noise based on stability
+        6. Compute dynamic personality score from real metrics
+        7. Return updated weights + num_examples + metrics
         """
         self.set_parameters(parameters)
 
+        simulate = config.SIMULATE_BEHAVIOUR
         use_dynamic = (config.PERSONALITY_MODE == "dynamic")
+
+        # ── 1. Reliability → Round dropout ─────────────────────────────
+        if simulate:
+            reliability = self.personality_metrics["reliability"]
+            rng = np.random.RandomState(
+                config.SEED + self.client_id + hash("reliability") % 10000
+                + getattr(self, "_round_counter", 0)
+            )
+            if rng.random() > reliability:
+                # Client "drops out" — return unchanged global params
+                self._round_counter = getattr(self, "_round_counter", 0) + 1
+                metrics: Dict = {
+                    "client_id": self.client_id,
+                    "dropped": True,
+                }
+                if self.mode == "personality":
+                    metrics["personality_score"] = 0.0
+                return self.get_parameters({}), 0, metrics
+
+        # ── 2. Compute power → Reduced local epochs ───────────────────
+        local_epochs = config.LOCAL_EPOCHS
+        if simulate:
+            compute_power = self.personality_metrics["compute_power"]
+            local_epochs = max(1, int(config.LOCAL_EPOCHS * compute_power))
 
         # ── Snapshot parameters before training (dynamic mode only) ────
         if self.mode == "personality" and use_dynamic:
@@ -89,10 +116,23 @@ class FlowerClient(fl.client.NumPyClient):
 
         # ── Local training ─────────────────────────────────────────────
         total_loss = 0.0
-        for _ in range(config.LOCAL_EPOCHS):
+        for _ in range(local_epochs):
             epoch_loss = train_one_epoch(self.model, self.train_loader, self.device)
             total_loss += epoch_loss
-        avg_loss = total_loss / max(config.LOCAL_EPOCHS, 1)
+        avg_loss = total_loss / max(local_epochs, 1)
+
+        # ── 3. Stability → Gradient noise ──────────────────────────────
+        if simulate:
+            stability = self.personality_metrics["stability"]
+            noise_level = (1.0 - stability) * config.STABILITY_NOISE_SCALE
+            if noise_level > 0:
+                with torch.no_grad():
+                    for p in self.model.parameters():
+                        noise = torch.randn_like(p) * noise_level * p.std()
+                        p.add_(noise)
+
+        # ── Increment round counter for reproducible dropout ───────────
+        self._round_counter = getattr(self, "_round_counter", 0) + 1
 
         # ── Build metrics dict ─────────────────────────────────────────
         metrics: Dict = {"client_id": self.client_id}

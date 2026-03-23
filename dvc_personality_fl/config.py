@@ -45,17 +45,17 @@ MODE = "basic"
 #              computed once at client init and fixed for all rounds
 # "dynamic" — real per-round metrics (training loss, val accuracy, etc.)
 #              recomputed every round from actual training signals
-PERSONALITY_MODE = "dynamic"
+PERSONALITY_MODE = "static"
 
-# ── Personality weight coefficients ────────────────────────────────────
+# ── Personality weight coefficients for static mode───────────────────────────────────
 # Used in compute_personality_score():
 #   P_k = w_s * stability + w_r * reliability
 #       + w_c * compute_power + w_d * data_diversity
 PERSONALITY_WEIGHTS = {
-    "stability": 0.10,
-    "reliability": 0.10,
-    "compute_power": 0.10,
-    "data_diversity": 0.70,
+    "stability": 0.20,
+    "reliability": 0.25,
+    "compute_power": 0.20,
+    "data_diversity": 0.35,
 }
 
 # ── Dynamic personality weight coefficients ────────────────────────────
@@ -63,7 +63,7 @@ PERSONALITY_WEIGHTS = {
 #   P_k = w_tl * (1 - norm_loss) + w_va * val_accuracy
 #       + w_um * norm_update_mag  + w_dd * data_diversity
 DYNAMIC_PERSONALITY_WEIGHTS = {
-    "training_loss": 0.25,
+    "training_loss": 0.15,
     "val_accuracy": 0.35,
     "update_magnitude": 0.15,
     "data_diversity": 0.25,
@@ -73,7 +73,19 @@ DYNAMIC_PERSONALITY_WEIGHTS = {
 # Controls how sharply personality scores differentiate client weights.
 # Higher → more uniform (closer to FedAvg), Lower → more aggressive.
 # Set to 0.0 to disable softmax and use raw P_k * n_k weighting.
-SOFTMAX_TEMPERATURE = 0.0
+SOFTMAX_TEMPERATURE = 4.0
+
+# ── Behavioural simulation ─────────────────────────────────────────────
+# When True, personality metrics have real effects on client behaviour:
+#   • reliability   → probability of participating (else returns zero update)
+#   • compute_power → scales LOCAL_EPOCHS (fewer epochs for weaker devices)
+#   • stability     → Gaussian noise added to updates (noisier for unstable)
+SIMULATE_BEHAVIOUR = True
+
+# Standard deviation multiplier for stability-based gradient noise.
+# Noise σ = (1 - stability) * STABILITY_NOISE_SCALE * param_std
+STABILITY_NOISE_SCALE = 0.01
+
 
 # ── Random seed (for reproducibility) ─────────────────────────────────
 SEED = 42

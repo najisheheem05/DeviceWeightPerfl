@@ -31,6 +31,24 @@ from flwr.server.strategy import FedAvg
 from . import config
 
 
+class DropoutAwareFedAvg(FedAvg):
+    """FedAvg that filters out dropped clients (num_examples == 0) before aggregation."""
+
+    def aggregate_fit(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, FitRes]],
+        failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
+    ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
+        # Filter out dropped clients
+        active = [
+            (proxy, fit_res) for proxy, fit_res in results
+            if fit_res.num_examples > 0
+        ]
+        if not active:
+            return None, {}
+        return super().aggregate_fit(server_round, active, failures)
+
 class PersonalityWeightedStrategy(FedAvg):
     """
     FedAvg variant that weights each client's update by its personality score.
@@ -60,11 +78,19 @@ class PersonalityWeightedStrategy(FedAvg):
         if not results:
             return None, {}
 
+        # ── Filter out dropped clients (num_examples == 0) ────────────
+        active_results = [
+            (proxy, fit_res) for proxy, fit_res in results
+            if fit_res.num_examples > 0
+        ]
+        if not active_results:
+            return None, {}
+
         # ── Collect per-client data ────────────────────────────────────
         client_weights = []   # list of list-of-ndarrays
         combined_scores = []  # P_k * n_k
 
-        for _, fit_res in results:
+        for _, fit_res in active_results:
             ndarrays = parameters_to_ndarrays(fit_res.parameters)
             n_k = fit_res.num_examples
 

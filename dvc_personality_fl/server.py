@@ -14,7 +14,7 @@ from flwr.common import Metrics, Context
 
 from . import config
 from .model import get_model
-from .strategy import PersonalityWeightedStrategy
+from .strategy import PersonalityWeightedStrategy, DropoutAwareFedAvg
 from .client import FlowerClient
 from .dataset import get_partitioned_data, get_client_loaders, get_client_labels
 from .utils import get_parameters_from_model, set_seed
@@ -94,8 +94,8 @@ def run_simulation(
         strategy = PersonalityWeightedStrategy(**common_kwargs)
         print("\n🧠  Strategy: PersonalityWeightedStrategy")
     else:
-        strategy = fl.server.strategy.FedAvg(**common_kwargs)
-        print("\n📦  Strategy: Standard FedAvg")
+        strategy = DropoutAwareFedAvg(**common_kwargs)
+        print("\n📦  Strategy: Standard FedAvg (dropout-aware)")
 
     # ── Run simulation ─────────────────────────────────────────────────
     history = fl.simulation.start_simulation(
